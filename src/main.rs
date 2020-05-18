@@ -4,23 +4,10 @@ use json;
 
 fn main() {
     let data_url: String = String::from("https://qp.metakgp.org/data/data.json");
-    println!("Request URL: {}", data_url);
+    println!("Fetching JSON file from {} ...", data_url);
     let json_string = get_json_string(&data_url);
-    println!("Length of json response: {}", json_string.len());
-    let parsed = json::parse(&json_string).unwrap();
-    println!("Is array: {}", parsed.is_array());
-    println!("Array length: {}", parsed.len());
-    for (index, member) in parsed.members().enumerate() {
-        if index == 1 {
-            for content in member.entries() {
-                let val = match content.1.as_str() {
-                    Some(s) => s,
-                    None => ""
-                };
-                println!("{}: {}", content.0, val);
-            }
-        }
-    }
+    println!("Fetched JSON file.");
+    interpret_json(&json_string);
 }
 
 fn get_json_string(url: &str) -> String {
@@ -38,4 +25,20 @@ fn get_json_string(url: &str) -> String {
         transfer.perform().unwrap();
     }
     str::from_utf8(&dst).unwrap().to_string()
+}
+
+fn interpret_json(json_string: &str) {
+    let parsed = json::parse(&json_string).unwrap();
+    println!("Reading through {} entries ...", parsed.len());
+    for (index, member) in parsed.members().enumerate() {
+        if index == 1 {
+            for content in member.entries() {
+                let val = match content.1.as_str() {
+                    Some(s) => s,
+                    None => ""
+                };
+                println!("{}: {}", content.0, val);
+            }
+        }
+    }
 }
