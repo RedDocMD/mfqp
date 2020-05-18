@@ -1,6 +1,7 @@
 use curl::easy::Easy;
 use json;
 use json::JsonValue;
+use std::fmt;
 use std::io;
 use std::str;
 use sublime_fuzzy;
@@ -25,6 +26,16 @@ impl Paper {
     }
 }
 
+impl fmt::Display for Paper {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Department: {}\nLink: {}\nName: {}\nSemester: {}\nYear: {}",
+            self.department, self.link, self.name, self.semester, self.year
+        )
+    }
+}
+
 fn main() {
     let data_url: String = String::from("https://qp.metakgp.org/data/data.json");
     println!("Fetching JSON file from {} ...", data_url);
@@ -40,6 +51,12 @@ fn main() {
     println!("Reading through {} entries ...", parsed.len());
     let mut list = Vec::new();
     interpret_json(&parsed, &mut list, &input);
+    println!("Found {} matches.", list.len());
+    for paper in &list {
+        println!("--------------------------------");
+        println!("{}", paper);
+        println!("--------------------------------\n");
+    }
 }
 
 fn get_json_string(url: &str) -> String {
