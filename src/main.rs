@@ -30,8 +30,8 @@ impl fmt::Display for Paper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Department: {}\nLink: {}\nName: {}\nSemester: {}\nYear: {}",
-            self.department, self.link, self.name, self.semester, self.year
+            "Department: {}  Name: {}\nSemester: {}  Year: {}\nLink: {}",
+            self.department, self.name, self.semester, self.year, self.link
         )
     }
 }
@@ -51,11 +51,10 @@ fn main() {
     println!("Reading through {} entries ...", parsed.len());
     let mut list = Vec::new();
     interpret_json(&parsed, &mut list, &input);
-    println!("Found {} matches.", list.len());
+    println!("Found {} matches.\n", list.len());
     for paper in &list {
-        println!("--------------------------------");
         println!("{}", paper);
-        println!("--------------------------------\n");
+        println!("--------------------------------");
     }
 }
 
