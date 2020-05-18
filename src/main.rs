@@ -1,8 +1,9 @@
 use curl::easy::Easy;
-use std::str;
 use json;
 use json::JsonValue;
 use std::io;
+use std::str;
+use sublime_fuzzy;
 
 struct Paper {
     department: String,
@@ -13,8 +14,14 @@ struct Paper {
 }
 
 impl Paper {
-    pub fn new(department: String, link: String, name: String, semester: String, year: String) -> Self {
-        Paper { department, link, name, semester, year }
+    pub fn new() -> Self {
+        Paper {
+            department: String::new(),
+            link: String::new(),
+            name: String::new(),
+            semester: String::new(),
+            year: String::new(),
+        }
     }
 }
 
@@ -26,7 +33,9 @@ fn main() {
     let parsed = json::parse(&json_string).unwrap();
     let mut input = String::new();
     println!("Enter the name of the paper to search");
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
     input = input.trim().to_string();
     println!("Reading through {} entries ...", parsed.len());
     let mut list = Vec::new();
@@ -51,14 +60,39 @@ fn get_json_string(url: &str) -> String {
 }
 
 fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
+    const CASE_INSENSITIVE: bool = true;
     for member in parsed.members() {
-        let mut add_to_list = false;
         for content in member.entries() {
             if content.0 == "Paper" {
                 let val = match content.1.as_str() {
                     Some(s) => s,
-                    None => ""
+                    None => "",
                 };
+                let mut matcher = sublime_fuzzy::FuzzySearch::new(input, val, CASE_INSENSITIVE);
+                match matcher.best_match() {
+                    Some(result) => {
+                        if result.score() > 500 {
+                            let mut paper = Paper::new();
+                            for content in member.entries() {
+                                let val = match content.1.as_str() {
+                                    Some(s) => s,
+                                    None => "",
+                                };
+                                match content.0 {
+                                    "Department" => paper.department.push_str(val),
+                                    "Link" => paper.link.push_str(val),
+                                    "Paper" => paper.name.push_str(val),
+                                    "Semester" => paper.semester.push_str(val),
+                                    "Year" => paper.year.push_str(val),
+                                    &_ => {}
+                                }
+                            }
+                            list.push(paper);
+                        }
+                    }
+                    None => {}
+                };
+                break;
             }
         }
     }

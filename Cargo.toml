@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 json = "0.12.4"
 curl = "0.4.29"
+sublime_fuzzy = "0.6.0"
