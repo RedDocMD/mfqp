@@ -8,6 +8,7 @@ use std::io::Write;
 use std::str;
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use std::path::Path;
 
 struct Paper {
     department: String,
@@ -59,6 +60,24 @@ fn main() {
         println!("{}", paper);
         println!("--------------------------------");
     }
+}
+
+fn download_pdf() {
+    let path = Path::new("lorem_ipsum.pdf");
+    let display = path.display();
+
+    // Open a file in write-only mode, returns `io::Result<File>`
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
+    match file.write_all(text.as_bytes()) {
+        Err(why) => panic!("couldn't write to {}: {}", display, why),
+        Ok(_) => println!("successfully wrote to {}", display),
+    }
+    println!("{}", text);
 }
 
 fn get_json_string(url: &str) -> String {
