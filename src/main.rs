@@ -9,6 +9,8 @@ use std::io::Write;
 use std::str;
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use std::fs::File;
+use std::path::Path;
 
 struct Paper {
     department: String,
@@ -34,8 +36,8 @@ impl fmt::Display for Paper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Department: {}  Name: {}\nSemester: {}  Year: {}\nLink: {}",
-            self.department, self.name, self.semester, self.year, self.link
+            "Department: {}  Name: {}\nSemester: {}  Year: {}",
+            self.department, self.name, self.semester, self.year
         )
     }
 }
@@ -47,7 +49,7 @@ fn main() {
     println!("Fetched JSON file.");
     let parsed = json::parse(&json_string).unwrap();
     let mut input = String::new();
-    println!("Enter the name of the paper to search");
+    print_in_color("Enter the name of the paper to search", Color::Yellow);
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
@@ -66,8 +68,8 @@ fn main() {
             .expect("Failed to read line");
         match input.trim() {
             "y" => {
-                println!("Downloading...");
-                download(&paper.name).expect("Error while downloading");
+                print_in_color("Downloading ...", Color::Green);
+                download(&paper.link).expect("Error while downloading");
             }
             &_ => {}
         };
@@ -78,10 +80,32 @@ fn main() {
 async fn download(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     match reqwest::get(path).await {
         Ok(resp) => match resp.text().await {
-            Ok(text) => println!("RESPONSE: {} bytes from {}", text.len(), path),
-            Err(_) => println!("ERROR reading {}", path),
+            Ok(text) => {
+                let path = Path::new("lorem_ipsum.pdf");
+                let display = path.display();
+
+                // Open a file in write-only mode, returns `io::Result<File>`
+                let mut file = match File::create(&path) {
+                    Err(why) => panic!("couldn't create {}: {}", display, why),
+                    Ok(file) => file,
+                };
+
+                // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
+                match file.write_all(text.as_bytes()) {
+                    Err(why) => panic!("couldn't write to {}: {}", display, why),
+                    Ok(_) => println!("successfully wrote to {}", display),
+                }
+                println!("{}", text);
+            }
+            Err(_) => print_in_color(
+                &format!("Error while downloading from {}", path),
+                Color::Red,
+            ),
         },
-        Err(_) => println!("ERROR reading {}", path),
+        Err(_) => print_in_color(
+            &format!("Error while downloading from {}", path),
+            Color::Red,
+        ),
     }
     Ok(())
 }
