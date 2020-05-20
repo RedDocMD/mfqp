@@ -1,10 +1,13 @@
+use atty;
 use curl::easy::Easy;
 use json;
 use json::JsonValue;
 use std::fmt;
 use std::io;
+use std::io::Write;
 use std::str;
 use sublime_fuzzy;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 struct Paper {
     department: String,
@@ -43,7 +46,7 @@ fn main() {
     println!("Fetched JSON file.");
     let parsed = json::parse(&json_string).unwrap();
     let mut input = String::new();
-    println!("Enter the name of the paper to search");
+    print_in_color("Enter the name of the paper to search", Color::Yellow);
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
@@ -112,4 +115,19 @@ fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
             }
         }
     }
+}
+
+fn print_in_color(text: &str, color: Color) {
+    let mut choice = ColorChoice::Never;
+    if atty::is(atty::Stream::Stdout) {
+        choice = ColorChoice::Auto;
+    }
+    let mut stdout = StandardStream::stdout(choice);
+    stdout
+        .set_color(ColorSpec::new().set_fg(Some(color)))
+        .expect("Problem occurred");
+    writeln!(&mut stdout, "{}", text).expect("Problem occurred");
+    stdout
+        .set_color(ColorSpec::new().set_fg(Some(Color::White)))
+        .expect("Problem occurred");
 }
