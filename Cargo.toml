@@ -10,3 +10,7 @@ edition = "2018"
 json = "0.12.4"
 curl = "0.4.29"
 sublime_fuzzy = "0.6.0"
+termcolor = "1.1.0"
+atty = "0.2.14"
+reqwest = { version = "0.10", features = ["json"] }
+tokio = { version = "0.2", features = ["full"] }

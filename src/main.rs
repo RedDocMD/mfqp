@@ -1,10 +1,14 @@
+use atty;
 use curl::easy::Easy;
 use json;
 use json::JsonValue;
+use reqwest;
 use std::fmt;
 use std::io;
+use std::io::Write;
 use std::str;
 use sublime_fuzzy;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 struct Paper {
     department: String,
@@ -55,7 +59,31 @@ fn main() {
     for paper in &list {
         println!("{}", paper);
         println!("--------------------------------");
+        print_in_color("Do you want to download this? (y/N)", Color::Yellow);
+        input = String::from("");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
+        match input.trim() {
+            "y" => {
+                println!("Downloading...");
+                download(&paper.name).expect("Error while downloading");
+            }
+            &_ => {}
+        };
     }
+}
+
+#[tokio::main]
+async fn download(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    match reqwest::get(path).await {
+        Ok(resp) => match resp.text().await {
+            Ok(text) => println!("RESPONSE: {} bytes from {}", text.len(), path),
+            Err(_) => println!("ERROR reading {}", path),
+        },
+        Err(_) => println!("ERROR reading {}", path),
+    }
+    Ok(())
 }
 
 fn get_json_string(url: &str) -> String {
@@ -112,4 +140,19 @@ fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
             }
         }
     }
+}
+
+fn print_in_color(text: &str, color: Color) {
+    let mut choice = ColorChoice::Never;
+    if atty::is(atty::Stream::Stdout) {
+        choice = ColorChoice::Auto;
+    }
+    let mut stdout = StandardStream::stdout(choice);
+    stdout
+        .set_color(ColorSpec::new().set_fg(Some(color)))
+        .expect("Problem occurred");
+    writeln!(&mut stdout, "{}", text).expect("Problem occurred");
+    stdout
+        .set_color(ColorSpec::new().set_fg(Some(Color::White)))
+        .expect("Problem occurred");
 }
