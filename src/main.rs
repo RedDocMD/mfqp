@@ -3,12 +3,13 @@ use curl::easy::Easy;
 use json;
 use json::JsonValue;
 use std::fmt;
+use std::fs::File;
 use std::io;
 use std::io::Write;
+use std::path::Path;
 use std::str;
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-use std::path::Path;
 
 struct Paper {
     department: String,
@@ -62,7 +63,21 @@ fn main() {
     }
 }
 
-fn download_pdf() {
+fn download_pdf(url: &str) {
+    let mut easy = Easy::new();
+    easy.url(url).unwrap();
+    let mut dst = Vec::new();
+    {
+        let mut transfer = easy.transfer();
+        transfer
+            .write_function(|data| {
+                dst.extend_from_slice(data);
+                Ok(data.len())
+            })
+            .unwrap();
+        transfer.perform().unwrap();
+    }
+
     let path = Path::new("lorem_ipsum.pdf");
     let display = path.display();
 
@@ -73,11 +88,10 @@ fn download_pdf() {
     };
 
     // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
-    match file.write_all(text.as_bytes()) {
+    match file.write_all(&dst) {
         Err(why) => panic!("couldn't write to {}: {}", display, why),
         Ok(_) => println!("successfully wrote to {}", display),
     }
-    println!("{}", text);
 }
 
 fn get_json_string(url: &str) -> String {
