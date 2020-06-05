@@ -43,15 +43,14 @@ impl fmt::Display for Paper {
 
 pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Box<dyn Error>> {
     let mut easy = Easy::new();
-    easy.url(url).unwrap();
+    easy.url(url)?;
     let mut dst = Vec::new();
     {
         let mut transfer = easy.transfer();
-        transfer
-            .write_function(|data| {
-                dst.extend_from_slice(data);
-                Ok(data.len())
-            })?;
+        transfer.write_function(|data| {
+            dst.extend_from_slice(data);
+            Ok(data.len())
+        })?;
         transfer.perform()?;
     }
 
@@ -62,21 +61,20 @@ pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Bo
     Ok(())
 }
 
-pub fn get_json_string(url: &str) -> String {
+pub fn get_json_string(url: &str) -> Result<String, Box<dyn Error>> {
     let mut easy = Easy::new();
-    easy.url(url).unwrap();
+    easy.url(url)?;
     let mut dst = Vec::new();
     {
         let mut transfer = easy.transfer();
-        transfer
-            .write_function(|data| {
-                dst.extend_from_slice(data);
-                Ok(data.len())
-            })
-            .unwrap();
-        transfer.perform().unwrap();
+        transfer.write_function(|data| {
+            dst.extend_from_slice(data);
+            Ok(data.len())
+        })?;
+        transfer.perform()?;
     }
-    str::from_utf8(&dst).unwrap().to_string()
+    let result = str::from_utf8(&dst)?;
+    Ok(result.to_string())
 }
 
 pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
@@ -120,19 +118,16 @@ pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
     }
 }
 
-pub fn print_in_color(text: &str, color: Color) {
+pub fn print_in_color(text: &str, color: Color) -> Result<(), Box<dyn Error>> {
     let mut choice = ColorChoice::Never;
     if atty::is(atty::Stream::Stdout) {
         choice = ColorChoice::Auto;
     }
     let mut stdout = StandardStream::stdout(choice);
-    stdout
-        .set_color(ColorSpec::new().set_fg(Some(color)))
-        .expect("Problem occurred");
-    writeln!(&mut stdout, "{}", text).expect("Problem occurred");
-    stdout
-        .set_color(ColorSpec::new().set_fg(Some(Color::White)))
-        .expect("Problem occurred");
+    stdout.set_color(ColorSpec::new().set_fg(Some(color)))?;
+    writeln!(&mut stdout, "{}", text)?;
+    stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -146,7 +141,7 @@ mod tests {
         let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
         match download_pdf(link, filename, directory) {
             Ok(()) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e)
+            Err(e) => println!("Failed to download because: {}", e),
         };
     }
 
@@ -157,7 +152,7 @@ mod tests {
         let link = "grabled nonsense";
         match download_pdf(link, filename, directory) {
             Ok(()) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e)
+            Err(e) => println!("Failed to download because: {}", e),
         };
     }
 
@@ -168,7 +163,7 @@ mod tests {
         let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
         match download_pdf(link, filename, directory) {
             Ok(()) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e)
+            Err(e) => println!("Failed to download because: {}", e),
         };
     }
 }
