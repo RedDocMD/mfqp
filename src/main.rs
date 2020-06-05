@@ -5,6 +5,7 @@ use std::process;
 use termcolor::Color;
 
 use mfqp;
+use mfqp::Paper;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let data_url = String::from("https://qp.metakgp.org/data/data.json");
@@ -32,12 +33,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut download = false;
     let mut download_directory = String::from(".");
+    let mut interactive_download = false;
     mfqp::print_in_color("Do you want to download files? (y/N)", Color::Yellow);
     input = String::new();
     io::stdin().read_line(&mut input)?;
     input = input.trim().to_string();
     if input == String::from("y") {
         download = true;
+
         mfqp::print_in_color(
             format!(
                 "Enter the directory to download to? (default: {})",
@@ -49,6 +52,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         download_directory = String::new();
         io::stdin().read_line(&mut download_directory)?;
         download_directory = download_directory.trim().to_string();
+
+        mfqp::print_in_color(
+            "Do you want to download interactively? (y/N)",
+            Color::Yellow,
+        );
+        input = String::new();
+        io::stdin().read_line(&mut input)?;
+        input = input.trim().to_string();
+        if input == String::from("y") {
+            interactive_download = true;
+        }
     }
 
     println!("\nFound {} matches.\n", list.len());
@@ -56,25 +70,36 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{}", paper);
         println!("--------------------------------");
         if download {
-            mfqp::print_in_color("Do you want to download this paper? (y/N)", Color::Yellow);
-            input = String::new();
-            io::stdin().read_line(&mut input)?;
-            input = input.trim().to_string();
-            if input == String::from("y") {
-                match mfqp::download_pdf(paper.link(), &paper.filename(), &download_directory) {
-                    Ok(()) => mfqp::print_in_color("Downloaded", Color::Green),
-                    Err(e) => {
-                        mfqp::print_in_color(
-                            format!("Failed to download because: {}", e).as_str(),
-                            Color::Red,
-                        );
-                        println!("Link for manual download: {}", paper.link());
-                    }
-                };
+            if interactive_download {
+                mfqp::print_in_color("Do you want to download this paper? (y/N)", Color::Yellow);
+                input = String::new();
+                io::stdin().read_line(&mut input)?;
+                input = input.trim().to_string();
+                if input == String::from("y") {
+                    download_paper(paper, &download_directory);
+                }
+            } else {
+                download_paper(paper, &download_directory);
             }
             println!("--------------------------------");
         }
     }
 
     Ok(())
+}
+
+fn download_paper(paper: &Paper, download_directory: &str) {
+    match mfqp::download_pdf(paper.link(), &paper.filename(), download_directory) {
+        Ok(()) => mfqp::print_in_color(
+            format!("Downloaded {}", paper.filename()).as_str(),
+            Color::Green,
+        ),
+        Err(e) => {
+            mfqp::print_in_color(
+                format!("Failed to download because: {}", e).as_str(),
+                Color::Red,
+            );
+            println!("Link for manual download: {}", paper.link());
+        }
+    };
 }
