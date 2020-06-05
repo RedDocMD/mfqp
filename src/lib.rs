@@ -119,7 +119,7 @@ pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
     }
 }
 
-pub fn print_in_color(text: &str, color: Color) -> Result<(), Box<dyn Error>> {
+fn print_in_color_private(text: &str, color: Color) -> Result<(), Box<dyn Error>> {
     let mut choice = ColorChoice::Never;
     if atty::is(atty::Stream::Stdout) {
         choice = ColorChoice::Auto;
@@ -129,6 +129,10 @@ pub fn print_in_color(text: &str, color: Color) -> Result<(), Box<dyn Error>> {
     writeln!(&mut stdout, "{}", text)?;
     stdout.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
     Ok(())
+}
+
+pub fn print_in_color(text: &str, color: Color) {
+    print_in_color_private(text, color).unwrap_or_else(|_err| println!("{}", text));
 }
 
 #[cfg(test)]
