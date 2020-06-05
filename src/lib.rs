@@ -94,10 +94,7 @@ pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
                         if result.score() > SCORE_THRESHOLD {
                             let mut paper = Paper::new();
                             for content in member.entries() {
-                                let val = match content.1.as_str() {
-                                    Some(s) => s,
-                                    None => "",
-                                };
+                                let val = content.1.as_str().unwrap_or_default();
                                 match content.0 {
                                     "Department" => paper.department.push_str(val),
                                     "Link" => paper.link.push_str(val),
