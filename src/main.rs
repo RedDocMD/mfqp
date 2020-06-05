@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         mfqp::print_in_color("Failed to fetch JSON file", Color::Red);
         process::exit(1)
     });
-    println!("Fetched JSON file.");
+    mfqp::print_in_color("Fetched JSON file.", Color::Green);
 
     let parsed = json::parse(&json_string).unwrap_or_else(|_err| {
         mfqp::print_in_color("Failed to parse JSON file", Color::Red);
@@ -30,10 +30,50 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut list = Vec::new();
     mfqp::interpret_json(&parsed, &mut list, &input);
 
+    let mut download = false;
+    let mut download_directory = String::from(".");
+    mfqp::print_in_color("Do you want to download files? (y/N)", Color::Yellow);
+    input = String::new();
+    io::stdin().read_line(&mut input)?;
+    input = input.trim().to_string();
+    if input == String::from("y") {
+        download = true;
+        mfqp::print_in_color(
+            format!(
+                "Enter the directory to download to? (default: {})",
+                download_directory
+            )
+            .as_str(),
+            Color::Yellow,
+        );
+        download_directory = String::new();
+        io::stdin().read_line(&mut download_directory)?;
+        download_directory = download_directory.trim().to_string();
+    }
+
     println!("\nFound {} matches.\n", list.len());
     for paper in &list {
         println!("{}", paper);
         println!("--------------------------------");
+        if download {
+            mfqp::print_in_color("Do you want to download this paper? (y/N)", Color::Yellow);
+            input = String::new();
+            io::stdin().read_line(&mut input)?;
+            input = input.trim().to_string();
+            if input == String::from("y") {
+                match mfqp::download_pdf(paper.link(), &paper.filename(), &download_directory) {
+                    Ok(()) => mfqp::print_in_color("Downloaded", Color::Green),
+                    Err(e) => {
+                        mfqp::print_in_color(
+                            format!("Failed to download because: {}", e).as_str(),
+                            Color::Red,
+                        );
+                        println!("Link for manual download: {}", paper.link());
+                    }
+                };
+            }
+            println!("--------------------------------");
+        }
     }
 
     Ok(())

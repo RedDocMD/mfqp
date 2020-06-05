@@ -2,6 +2,7 @@ use atty;
 use curl::easy::Easy;
 use json;
 use json::JsonValue;
+use regex::Regex;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
@@ -30,8 +31,23 @@ impl Paper {
         }
     }
 
-    pub fn link(paper: &Self) -> &String {
-        &paper.link
+    pub fn link(self: &Self) -> &str {
+        self.link.as_str()
+    }
+
+    pub fn filename(self: &Self) -> String {
+        format!(
+            "{}_{}_{}_{}.pdf",
+            Self::replace_spaces_with_underscore(&self.name.trim()),
+            Self::replace_spaces_with_underscore(&self.department.trim()),
+            Self::replace_spaces_with_underscore(&self.semester.trim()),
+            Self::replace_spaces_with_underscore(&self.year.trim())
+        )
+    }
+
+    fn replace_spaces_with_underscore(string: &str) -> String {
+        let re = Regex::new(r"\s+").unwrap();
+        re.replace_all(string, "_").into_owned()
     }
 }
 
@@ -88,10 +104,7 @@ pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
     for member in parsed.members() {
         for content in member.entries() {
             if content.0 == "Paper" {
-                let val = match content.1.as_str() {
-                    Some(s) => s,
-                    None => "",
-                };
+                let val = content.1.as_str().unwrap_or_default();
                 let mut matcher = sublime_fuzzy::FuzzySearch::new(input, val, CASE_INSENSITIVE);
                 match matcher.best_match() {
                     Some(result) => {
