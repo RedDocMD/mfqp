@@ -2,6 +2,7 @@ use atty;
 use curl::easy::Easy;
 use json;
 use json::JsonValue;
+use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -63,7 +64,7 @@ fn main() {
     }
 }
 
-fn download_pdf(url: &str) {
+fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Box<dyn Error>> {
     let mut easy = Easy::new();
     easy.url(url).unwrap();
     let mut dst = Vec::new();
@@ -78,20 +79,11 @@ fn download_pdf(url: &str) {
         transfer.perform().unwrap();
     }
 
-    let path = Path::new("lorem_ipsum.pdf");
-    let display = path.display();
+    let path = Path::new(directory).join(filename);
+    let mut file = File::create(&path)?;
+    file.write_all(&dst)?;
 
-    // Open a file in write-only mode, returns `io::Result<File>`
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-
-    // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
-    match file.write_all(&dst) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(_) => println!("successfully wrote to {}", display),
-    }
+    Ok(())
 }
 
 fn get_json_string(url: &str) -> String {
@@ -113,6 +105,8 @@ fn get_json_string(url: &str) -> String {
 
 fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
     const CASE_INSENSITIVE: bool = true;
+    const SCORE_THRESHOLD: isize = 500;
+
     for member in parsed.members() {
         for content in member.entries() {
             if content.0 == "Paper" {
@@ -123,7 +117,7 @@ fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
                 let mut matcher = sublime_fuzzy::FuzzySearch::new(input, val, CASE_INSENSITIVE);
                 match matcher.best_match() {
                     Some(result) => {
-                        if result.score() > 500 {
+                        if result.score() > SCORE_THRESHOLD {
                             let mut paper = Paper::new();
                             for content in member.entries() {
                                 let val = match content.1.as_str() {
