@@ -51,9 +51,8 @@ pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Bo
             .write_function(|data| {
                 dst.extend_from_slice(data);
                 Ok(data.len())
-            })
-            .unwrap();
-        transfer.perform().unwrap();
+            })?;
+        transfer.perform()?;
     }
 
     let path = Path::new(directory).join(filename);
@@ -134,4 +133,42 @@ pub fn print_in_color(text: &str, color: Color) {
     stdout
         .set_color(ColorSpec::new().set_fg(Some(Color::White)))
         .expect("Problem occurred");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_download_pdf_successful() {
+        let directory = "/home/dm/Downloads";
+        let filename = "ai.pdf";
+        let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
+        match download_pdf(link, filename, directory) {
+            Ok(()) => println!("Successfully downloaded"),
+            Err(e) => println!("Failed to download because: {}", e)
+        };
+    }
+
+    #[test]
+    fn test_download_pdf_wrong_link() {
+        let directory = "/home/dm/Downloads";
+        let filename = "ai.pdf";
+        let link = "grabled nonsense";
+        match download_pdf(link, filename, directory) {
+            Ok(()) => println!("Successfully downloaded"),
+            Err(e) => println!("Failed to download because: {}", e)
+        };
+    }
+
+    #[test]
+    fn test_download_pdf_non_existent_directory() {
+        let directory = "/junk/dump";
+        let filename = "ai.pdf";
+        let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
+        match download_pdf(link, filename, directory) {
+            Ok(()) => println!("Successfully downloaded"),
+            Err(e) => println!("Failed to download because: {}", e)
+        };
+    }
 }
