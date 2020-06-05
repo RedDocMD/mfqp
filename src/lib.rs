@@ -12,11 +12,11 @@ use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 pub struct Paper {
-    pub department: String,
-    pub link: String,
-    pub name: String,
-    pub semester: String,
-    pub year: String,
+    department: String,
+    link: String,
+    name: String,
+    semester: String,
+    year: String,
 }
 
 impl Paper {
@@ -29,14 +29,18 @@ impl Paper {
             year: String::new(),
         }
     }
+
+    pub fn link(paper: &Self) -> &String {
+        &paper.link
+    }
 }
 
 impl fmt::Display for Paper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Department: {}  Name: {}\nSemester: {}  Year: {}\nLink: {}",
-            self.department, self.name, self.semester, self.year, self.link
+            "Department: {}  Name: {}\nSemester: {}  Year: {}",
+            self.department, self.name, self.semester, self.year
         )
     }
 }
