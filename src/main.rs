@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("\nReading through {} entries ...", parsed.len());
     let mut list = Vec::new();
     mfqp::interpret_json(&parsed, &mut list, &input);
+    println!("\nFound {} matches.\n", list.len());
 
     let mut download = false;
     let mut download_directory = String::from(".");
@@ -65,7 +66,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    println!("\nFound {} matches.\n", list.len());
     for paper in &list {
         println!("{}", paper);
         println!("--------------------------------");
