@@ -78,10 +78,6 @@ pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<usize,
     }
 }
 
-pub async fn download_pdf_async(url: &str, filename: &str, directory: &str) {
-    let response = reqwest::get(url).await;
-}
-
 pub fn get_json_string(url: &str) -> reqwest::Result<String> {
     reqwest::blocking::get(url)?.text()
 }
