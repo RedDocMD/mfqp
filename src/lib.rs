@@ -2,15 +2,16 @@ use atty;
 use json;
 use json::JsonValue;
 use regex::Regex;
-use std::error::Error;
 use std::fmt;
-use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
 use std::str;
+use std::{error::Error, path::PathBuf};
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
+#[derive(Clone)]
 pub struct Paper {
     department: String,
     link: String,
@@ -60,26 +61,28 @@ impl fmt::Display for Paper {
     }
 }
 
-pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<usize, Box<dyn Error>> {
-    let response = reqwest::blocking::get(url)?.error_for_status()?;
-    if response.status().is_redirection() {
-        download_pdf(
-            response.headers()["Location"].to_str()?,
-            filename,
-            directory,
-        )
-    } else {
-        let content = response.bytes()?;
-        let size = content.len();
-        let path: PathBuf = [directory, filename].iter().collect();
-        let mut file = File::create(&path)?;
-        file.write_all(&content)?;
-        Ok(size)
+pub async fn download_pdf(
+    url: String,
+    filename: String,
+    directory: String,
+) -> Result<usize, Box<dyn Error>> {
+    // println!("{}", url);
+    let mut response = reqwest::get(&url).await?.error_for_status()?;
+    while response.status().is_redirection() {
+        response = reqwest::get(response.headers()["Location"].to_str()?)
+            .await?
+            .error_for_status()?;
     }
+    let contents = response.bytes().await?;
+    let size = contents.len();
+    let path: PathBuf = [directory, filename].iter().collect();
+    let mut file = File::create(&path).await?;
+    file.write_all(&contents).await?;
+    Ok(size)
 }
 
-pub fn get_json_string(url: &str) -> reqwest::Result<String> {
-    reqwest::blocking::get(url)?.text()
+pub async fn get_json_string(url: &str) -> reqwest::Result<String> {
+    reqwest::get(url).await?.text().await
 }
 
 pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
@@ -131,42 +134,4 @@ fn print_in_color_private(text: &str, color: Color) -> Result<(), Box<dyn Error>
 
 pub fn print_in_color(text: &str, color: Color) {
     print_in_color_private(text, color).unwrap_or_else(|_err| println!("{}", text));
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_download_pdf_successful() {
-        let directory = "/home/dm/Downloads";
-        let filename = "ai.pdf";
-        let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
-        match download_pdf(link, filename, directory) {
-            Ok(_) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e),
-        };
-    }
-
-    #[test]
-    fn test_download_pdf_wrong_link() {
-        let directory = "/home/dm/Downloads";
-        let filename = "ai.pdf";
-        let link = "grabled nonsense";
-        match download_pdf(link, filename, directory) {
-            Ok(_) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e),
-        };
-    }
-
-    #[test]
-    fn test_download_pdf_non_existent_directory() {
-        let directory = "/junk/dump";
-        let filename = "ai.pdf";
-        let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
-        match download_pdf(link, filename, directory) {
-            Ok(_) => println!("Successfully downloaded"),
-            Err(e) => println!("Failed to download because: {}", e),
-        };
-    }
 }

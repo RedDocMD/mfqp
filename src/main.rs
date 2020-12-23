@@ -7,14 +7,17 @@ use termcolor::Color;
 use mfqp;
 use mfqp::Paper;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let data_url = String::from("https://qp.metakgp.org/data/data.json");
     println!("Fetching JSON file from {} ...", data_url);
 
-    let json_string = mfqp::get_json_string(&data_url).unwrap_or_else(|_err| {
-        mfqp::print_in_color("Failed to fetch JSON file", Color::Red);
-        process::exit(1)
-    });
+    let json_string = mfqp::get_json_string(&data_url)
+        .await
+        .unwrap_or_else(|_err| {
+            mfqp::print_in_color("Failed to fetch JSON file", Color::Red);
+            process::exit(1)
+        });
     mfqp::print_in_color("Fetched JSON file.", Color::Green);
 
     let parsed = json::parse(&json_string).unwrap_or_else(|_err| {
@@ -49,11 +52,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         download_directory = String::new();
         io::stdin().read_line(&mut download_directory)?;
         download_directory = download_directory.trim().to_string();
-        for paper in &list {
-            println!("{}", paper);
-            println!("--------------------------------");
-            download_paper(paper, &download_directory);
-            println!("--------------------------------");
+        for paper in list {
+            let download_directory = download_directory.clone();
+            // println!("Hell Ya!");
+            tokio::spawn(async move {
+                download_paper(paper.clone(), download_directory).await;
+            });
         }
     } else {
         mfqp::print_in_color("Do you want to list files? (Y/n)", Color::Yellow);
@@ -62,21 +66,33 @@ fn main() -> Result<(), Box<dyn Error>> {
         input = input.trim().to_string();
         if input != String::from("n") {
             for paper in &list {
-                println!("{}\n", paper)
+                println!("{}\n", paper);
             }
         }
     }
-
     Ok(())
 }
 
-fn download_paper(paper: &Paper, download_directory: &str) {
-    match mfqp::download_pdf(paper.link(), &paper.filename(), download_directory) {
-        Ok(_) => mfqp::print_in_color(
-            format!("Downloaded {}", paper.filename()).as_str(),
-            Color::Green,
-        ),
+async fn download_paper(paper: Paper, download_directory: String) {
+    match mfqp::download_pdf(
+        paper.link().to_string(),
+        paper.filename(),
+        download_directory,
+    )
+    .await
+    {
+        Ok(_) => {
+            println!("{}", paper);
+            println!("--------------------------------");
+            mfqp::print_in_color(
+                format!("Downloaded {}", paper.filename()).as_str(),
+                Color::Green,
+            );
+            println!("--------------------------------");
+        }
         Err(e) => {
+            println!("{}", paper);
+            println!("--------------------------------");
             mfqp::print_in_color(
                 format!("Failed to download because: {}", e).as_str(),
                 Color::Red,
