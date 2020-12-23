@@ -1,5 +1,4 @@
 use atty;
-use curl::easy::Easy;
 use json;
 use json::JsonValue;
 use regex::Regex;
@@ -7,7 +6,7 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str;
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -62,31 +61,6 @@ impl fmt::Display for Paper {
 }
 
 pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<usize, Box<dyn Error>> {
-    let mut easy = Easy::new();
-    easy.url(url)?;
-    let mut dst = Vec::new();
-    {
-        let mut transfer = easy.transfer();
-        transfer.write_function(|data| {
-            dst.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        transfer.perform()?;
-    }
-
-    let size = dst.len();
-    let path = Path::new(directory).join(filename);
-    let mut file = File::create(&path)?;
-    file.write_all(&dst)?;
-
-    Ok(size)
-}
-
-pub fn download_pdf_reqwest(
-    url: &str,
-    filename: &str,
-    directory: &str,
-) -> Result<usize, Box<dyn Error>> {
     let response = reqwest::blocking::get(url)?.error_for_status()?;
     if response.status().is_redirection() {
         download_pdf(
@@ -108,20 +82,8 @@ pub async fn download_pdf_async(url: &str, filename: &str, directory: &str) {
     let response = reqwest::get(url).await;
 }
 
-pub fn get_json_string(url: &str) -> Result<String, Box<dyn Error>> {
-    let mut easy = Easy::new();
-    easy.url(url)?;
-    let mut dst = Vec::new();
-    {
-        let mut transfer = easy.transfer();
-        transfer.write_function(|data| {
-            dst.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        transfer.perform()?;
-    }
-    let result = str::from_utf8(&dst)?;
-    Ok(result.to_string())
+pub fn get_json_string(url: &str) -> reqwest::Result<String> {
+    reqwest::blocking::get(url)?.text()
 }
 
 pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {

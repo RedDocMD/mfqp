@@ -76,10 +76,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 io::stdin().read_line(&mut input)?;
                 input = input.trim().to_string();
                 if input == String::from("y") {
-                    download_paper_reqwest(paper, &download_directory);
+                    download_paper(paper, &download_directory);
                 }
             } else {
-                download_paper_reqwest(paper, &download_directory);
+                download_paper(paper, &download_directory);
             }
             println!("--------------------------------");
         }
@@ -90,32 +90,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn download_paper(paper: &Paper, download_directory: &str) {
     match mfqp::download_pdf(paper.link(), &paper.filename(), download_directory) {
-        Ok(size) => {
-            if size < 2000 {
-                mfqp::print_in_color(
-                    format!("Downloaded file may be too small: {}B", size).as_str(),
-                    Color::Red,
-                );
-                println!("Link for manual download: {}", paper.link());
-            } else {
-                mfqp::print_in_color(
-                    format!("Downloaded {}", paper.filename()).as_str(),
-                    Color::Green,
-                )
-            }
-        }
-        Err(e) => {
-            mfqp::print_in_color(
-                format!("Failed to download because: {}", e).as_str(),
-                Color::Red,
-            );
-            println!("Link for manual download: {}", paper.link());
-        }
-    };
-}
-
-fn download_paper_reqwest(paper: &Paper, download_directory: &str) {
-    match mfqp::download_pdf_reqwest(paper.link(), &paper.filename(), download_directory) {
         Ok(_) => mfqp::print_in_color(
             format!("Downloaded {}", paper.filename()).as_str(),
             Color::Green,
