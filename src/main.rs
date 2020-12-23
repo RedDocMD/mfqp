@@ -90,10 +90,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn download_paper(paper: &Paper, download_directory: &str) {
     match mfqp::download_pdf(paper.link(), &paper.filename(), download_directory) {
-        Ok(()) => mfqp::print_in_color(
-            format!("Downloaded {}", paper.filename()).as_str(),
-            Color::Green,
-        ),
+        Ok(size) => {
+            if size < 2000 {
+                mfqp::print_in_color(
+                    format!("Downloaded file may be too small: {}B", size).as_str(),
+                    Color::Red,
+                );
+                println!("Link for manual download: {}", paper.link());
+            } else {
+                mfqp::print_in_color(
+                    format!("Downloaded {}", paper.filename()).as_str(),
+                    Color::Green,
+                )
+            }
+        }
         Err(e) => {
             mfqp::print_in_color(
                 format!("Failed to download because: {}", e).as_str(),

@@ -61,7 +61,7 @@ impl fmt::Display for Paper {
     }
 }
 
-pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Box<dyn Error>> {
+pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<usize, Box<dyn Error>> {
     let mut easy = Easy::new();
     easy.url(url)?;
     let mut dst = Vec::new();
@@ -74,11 +74,12 @@ pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<(), Bo
         transfer.perform()?;
     }
 
+    let size = dst.len();
     let path = Path::new(directory).join(filename);
     let mut file = File::create(&path)?;
     file.write_all(&dst)?;
 
-    Ok(())
+    Ok(size)
 }
 
 pub fn get_json_string(url: &str) -> Result<String, Box<dyn Error>> {
@@ -158,7 +159,7 @@ mod tests {
         let filename = "ai.pdf";
         let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
         match download_pdf(link, filename, directory) {
-            Ok(()) => println!("Successfully downloaded"),
+            Ok(_) => println!("Successfully downloaded"),
             Err(e) => println!("Failed to download because: {}", e),
         };
     }
@@ -169,7 +170,7 @@ mod tests {
         let filename = "ai.pdf";
         let link = "grabled nonsense";
         match download_pdf(link, filename, directory) {
-            Ok(()) => println!("Successfully downloaded"),
+            Ok(_) => println!("Successfully downloaded"),
             Err(e) => println!("Failed to download because: {}", e),
         };
     }
@@ -180,7 +181,7 @@ mod tests {
         let filename = "ai.pdf";
         let link = "http://www.library.iitkgp.ac.in/pages/SemQuestionWiki/images/4/40/CS60045_Artificial_Intelligence_MA_2016.pdf";
         match download_pdf(link, filename, directory) {
-            Ok(()) => println!("Successfully downloaded"),
+            Ok(_) => println!("Successfully downloaded"),
             Err(e) => println!("Failed to download because: {}", e),
         };
     }
