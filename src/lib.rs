@@ -7,7 +7,7 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str;
 use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -80,6 +80,32 @@ pub fn download_pdf(url: &str, filename: &str, directory: &str) -> Result<usize,
     file.write_all(&dst)?;
 
     Ok(size)
+}
+
+pub fn download_pdf_reqwest(
+    url: &str,
+    filename: &str,
+    directory: &str,
+) -> Result<usize, Box<dyn Error>> {
+    let response = reqwest::blocking::get(url)?.error_for_status()?;
+    if response.status().is_redirection() {
+        download_pdf(
+            response.headers()["Location"].to_str()?,
+            filename,
+            directory,
+        )
+    } else {
+        let content = response.bytes()?;
+        let size = content.len();
+        let path: PathBuf = [directory, filename].iter().collect();
+        let mut file = File::create(&path)?;
+        file.write_all(&content)?;
+        Ok(size)
+    }
+}
+
+pub async fn download_pdf_async(url: &str, filename: &str, directory: &str) {
+    let response = reqwest::get(url).await;
 }
 
 pub fn get_json_string(url: &str) -> Result<String, Box<dyn Error>> {
