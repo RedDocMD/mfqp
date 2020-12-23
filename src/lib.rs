@@ -66,7 +66,6 @@ pub async fn download_pdf(
     filename: String,
     directory: String,
 ) -> Result<usize, Box<dyn Error>> {
-    // println!("{}", url);
     let mut response = reqwest::get(&url).await?.error_for_status()?;
     while response.status().is_redirection() {
         response = reqwest::get(response.headers()["Location"].to_str()?)

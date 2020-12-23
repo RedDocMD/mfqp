@@ -1,7 +1,7 @@
 use json;
-use std::error::Error;
 use std::io;
 use std::process;
+use std::{error::Error, path::PathBuf};
 use termcolor::Color;
 
 use mfqp;
@@ -35,28 +35,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
     mfqp::interpret_json(&parsed, &mut list, &input);
     println!("\nFound {} matches.\n", list.len());
 
-    let mut download_directory = String::from(".");
     mfqp::print_in_color("Do you want to download files? (y/N)", Color::Yellow);
     input = String::new();
     io::stdin().read_line(&mut input)?;
     input = input.trim().to_string();
     if input == String::from("y") {
+        let mut download_directory = get_default_dir();
         mfqp::print_in_color(
             format!(
                 "Enter the directory to download to? (default: {})",
-                download_directory
+                download_directory.to_str().unwrap()
             )
             .as_str(),
             Color::Yellow,
         );
-        download_directory = String::new();
-        io::stdin().read_line(&mut download_directory)?;
-        download_directory = download_directory.trim().to_string();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        input = input.trim().to_string();
+        download_directory.push(input);
         for paper in list {
             let download_directory = download_directory.clone();
-            // println!("Hell Ya!");
             tokio::spawn(async move {
-                download_paper(paper.clone(), download_directory).await;
+                download_paper(
+                    paper.clone(),
+                    download_directory.to_str().unwrap().to_string(),
+                )
+                .await;
             });
         }
     } else {
@@ -100,4 +104,15 @@ async fn download_paper(paper: Paper, download_directory: String) {
             println!("Link for manual download: {}", paper.link());
         }
     };
+}
+
+fn get_default_dir() -> PathBuf {
+    if let Some(dir) = dirs::download_dir() {
+        dir
+    } else if let Some(dir) = &mut dirs::home_dir() {
+        dir.push("Downloads");
+        dir.clone()
+    } else {
+        PathBuf::from(".")
+    }
 }
