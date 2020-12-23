@@ -32,16 +32,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     mfqp::interpret_json(&parsed, &mut list, &input);
     println!("\nFound {} matches.\n", list.len());
 
-    let mut download = false;
     let mut download_directory = String::from(".");
-    let mut interactive_download = false;
     mfqp::print_in_color("Do you want to download files? (y/N)", Color::Yellow);
     input = String::new();
     io::stdin().read_line(&mut input)?;
     input = input.trim().to_string();
     if input == String::from("y") {
-        download = true;
-
         mfqp::print_in_color(
             format!(
                 "Enter the directory to download to? (default: {})",
@@ -53,35 +49,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         download_directory = String::new();
         io::stdin().read_line(&mut download_directory)?;
         download_directory = download_directory.trim().to_string();
-
-        mfqp::print_in_color(
-            "Do you want to download interactively? (y/N)",
-            Color::Yellow,
-        );
+        for paper in &list {
+            println!("{}", paper);
+            println!("--------------------------------");
+            download_paper(paper, &download_directory);
+            println!("--------------------------------");
+        }
+    } else {
+        mfqp::print_in_color("Do you want to list files? (Y/n)", Color::Yellow);
         input = String::new();
         io::stdin().read_line(&mut input)?;
         input = input.trim().to_string();
-        if input == String::from("y") {
-            interactive_download = true;
-        }
-    }
-
-    for paper in &list {
-        println!("{}", paper);
-        println!("--------------------------------");
-        if download {
-            if interactive_download {
-                mfqp::print_in_color("Do you want to download this paper? (y/N)", Color::Yellow);
-                input = String::new();
-                io::stdin().read_line(&mut input)?;
-                input = input.trim().to_string();
-                if input == String::from("y") {
-                    download_paper(paper, &download_directory);
-                }
-            } else {
-                download_paper(paper, &download_directory);
+        if input != String::from("n") {
+            for paper in &list {
+                println!("{}\n", paper)
             }
-            println!("--------------------------------");
         }
     }
 
