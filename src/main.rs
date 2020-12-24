@@ -1,4 +1,5 @@
 use json;
+use std::fs;
 use std::io;
 use std::process;
 use std::sync::mpsc::{channel, Sender};
@@ -54,6 +55,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         io::stdin().read_line(&mut input)?;
         input = input.trim().to_string();
         download_directory.push(input);
+
+        if !download_directory.exists() {
+            fs::create_dir_all(&download_directory).unwrap_or_else(|err| {
+                mfqp::print_in_color("Failed create download dir", Color::Red);
+                println!("{}", err);
+                process::exit(1);
+            });
+        }
 
         let (tx, rx) = channel();
 
