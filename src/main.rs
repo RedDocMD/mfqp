@@ -1,6 +1,7 @@
 use json;
 use std::io;
 use std::process;
+use std::sync::mpsc::{channel, Sender};
 use std::{error::Error, path::PathBuf};
 use termcolor::Color;
 
@@ -53,15 +54,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
         io::stdin().read_line(&mut input)?;
         input = input.trim().to_string();
         download_directory.push(input);
+
+        let (tx, rx) = channel();
+
+        let num = list.len();
         for paper in list {
             let download_directory = download_directory.clone();
+            let tx = tx.clone();
             tokio::spawn(async move {
                 download_paper(
                     paper.clone(),
                     download_directory.to_str().unwrap().to_string(),
+                    tx,
                 )
                 .await;
             });
+        }
+
+        // This is to prevent Tokio runtime from exiting
+        // before all the downloads are completed
+        for _i in 0..num {
+            rx.recv().unwrap();
         }
     } else {
         mfqp::print_in_color("Do you want to list files? (Y/n)", Color::Yellow);
@@ -77,7 +90,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn download_paper(paper: Paper, download_directory: String) {
+async fn download_paper(paper: Paper, download_directory: String, tx: Sender<u32>) {
     match mfqp::download_pdf(
         paper.link().to_string(),
         paper.filename(),
@@ -86,17 +99,12 @@ async fn download_paper(paper: Paper, download_directory: String) {
     .await
     {
         Ok(_) => {
-            println!("{}", paper);
-            println!("--------------------------------");
             mfqp::print_in_color(
                 format!("Downloaded {}", paper.filename()).as_str(),
                 Color::Green,
             );
-            println!("--------------------------------");
         }
         Err(e) => {
-            println!("{}", paper);
-            println!("--------------------------------");
             mfqp::print_in_color(
                 format!("Failed to download because: {}", e).as_str(),
                 Color::Red,
@@ -104,6 +112,9 @@ async fn download_paper(paper: Paper, download_directory: String) {
             println!("Link for manual download: {}", paper.link());
         }
     };
+
+    // Signal that this download is over
+    tx.send(1).unwrap();
 }
 
 fn get_default_dir() -> PathBuf {
