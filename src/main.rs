@@ -135,7 +135,7 @@ async fn download_paper(paper: Paper, download_directory: String, tx: Sender<Mes
         }
         Err(e) => {
             tx.send(Message {
-                message: format!("Failed to download because: {}", e),
+                message: format!("Failed to download {} because: {}", paper.filename(), e),
                 color: Color::Red,
             })
             .unwrap();
