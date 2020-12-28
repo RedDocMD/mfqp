@@ -2,6 +2,7 @@ use json;
 use std::fs;
 use std::io;
 use std::process;
+use std::sync::mpsc::{channel, Sender};
 use std::{error::Error, path::PathBuf};
 use termcolor::Color;
 
@@ -63,24 +64,41 @@ async fn main() -> Result<(), Box<dyn Error>> {
             });
         }
 
+        let (tx, rx) = channel();
         let mut handles = Vec::new();
         for paper in list {
             let download_directory = download_directory.clone();
+            let tx = tx.clone();
             let handle = tokio::spawn(async move {
                 download_paper(
                     paper.clone(),
                     download_directory.to_str().unwrap().to_string(),
+                    tx,
                 )
                 .await;
             });
             handles.push(handle);
         }
 
+        let printer = tokio::spawn(async move {
+            loop {
+                match rx.recv() {
+                    Ok(message) => match message.color {
+                        Color::White => println!("{}", message.message),
+                        _ => mfqp::print_in_color(&message.message, message.color),
+                    },
+                    Err(_) => break,
+                }
+            }
+        });
+
         // This is to prevent Tokio runtime from exiting
         // before all the downloads are completed
         for handle in handles {
             handle.await.unwrap();
         }
+        drop(tx);
+        printer.await.unwrap();
     } else {
         mfqp::print_in_color("Do you want to list files? (Y/n)", Color::Yellow);
         input = String::new();
@@ -95,7 +113,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn download_paper(paper: Paper, download_directory: String) {
+struct Message {
+    message: String,
+    color: Color,
+}
+
+async fn download_paper(paper: Paper, download_directory: String, tx: Sender<Message>) {
     match mfqp::download_pdf(
         paper.link().to_string(),
         paper.filename(),
@@ -104,17 +127,23 @@ async fn download_paper(paper: Paper, download_directory: String) {
     .await
     {
         Ok(_) => {
-            mfqp::print_in_color(
-                format!("Downloaded {}", paper.filename()).as_str(),
-                Color::Green,
-            );
+            tx.send(Message {
+                message: format!("Downloaded {}", paper.filename()),
+                color: Color::Green,
+            })
+            .unwrap();
         }
         Err(e) => {
-            mfqp::print_in_color(
-                format!("Failed to download because: {}", e).as_str(),
-                Color::Red,
-            );
-            println!("Link for manual download: {}", paper.link());
+            tx.send(Message {
+                message: format!("Failed to download because: {}", e),
+                color: Color::Red,
+            })
+            .unwrap();
+            tx.send(Message {
+                message: format!("Link for manual download: {}", paper.link()),
+                color: Color::White,
+            })
+            .unwrap();
         }
     };
 }
