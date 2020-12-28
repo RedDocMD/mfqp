@@ -2,7 +2,6 @@ use json;
 use std::fs;
 use std::io;
 use std::process;
-use std::sync::mpsc::{channel, Sender};
 use std::{error::Error, path::PathBuf};
 use termcolor::Color;
 
@@ -64,26 +63,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             });
         }
 
-        let (tx, rx) = channel();
-
-        let num = list.len();
+        let mut handles = Vec::new();
         for paper in list {
             let download_directory = download_directory.clone();
-            let tx = tx.clone();
-            tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 download_paper(
                     paper.clone(),
                     download_directory.to_str().unwrap().to_string(),
-                    tx,
                 )
                 .await;
             });
+            handles.push(handle);
         }
 
         // This is to prevent Tokio runtime from exiting
         // before all the downloads are completed
-        for _i in 0..num {
-            rx.recv().unwrap();
+        for handle in handles {
+            handle.await.unwrap();
         }
     } else {
         mfqp::print_in_color("Do you want to list files? (Y/n)", Color::Yellow);
@@ -99,7 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn download_paper(paper: Paper, download_directory: String, tx: Sender<u32>) {
+async fn download_paper(paper: Paper, download_directory: String) {
     match mfqp::download_pdf(
         paper.link().to_string(),
         paper.filename(),
@@ -121,9 +117,6 @@ async fn download_paper(paper: Paper, download_directory: String, tx: Sender<u32
             println!("Link for manual download: {}", paper.link());
         }
     };
-
-    // Signal that this download is over
-    tx.send(1).unwrap();
 }
 
 fn get_default_dir() -> PathBuf {
