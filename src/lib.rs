@@ -85,14 +85,13 @@ pub async fn get_json_string(url: &str) -> reqwest::Result<String> {
 }
 
 pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
-    const CASE_INSENSITIVE: bool = true;
     const SCORE_THRESHOLD: isize = 500;
 
     for member in parsed.members() {
         for content in member.entries() {
             if content.0 == "Paper" {
                 let val = content.1.as_str().unwrap_or_default();
-                let mut matcher = sublime_fuzzy::FuzzySearch::new(input, val, CASE_INSENSITIVE);
+                let matcher = sublime_fuzzy::FuzzySearch::new(input, val).case_insensitive();
                 match matcher.best_match() {
                     Some(result) => {
                         if result.score() > SCORE_THRESHOLD {
