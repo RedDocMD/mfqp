@@ -1,17 +1,14 @@
-use atty;
-use json;
 use json::JsonValue;
 use regex::Regex;
 use std::fmt;
 use std::io::Write;
 use std::str;
 use std::{error::Error, path::PathBuf};
-use sublime_fuzzy;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Paper {
     department: String,
     link: String,
@@ -21,27 +18,17 @@ pub struct Paper {
 }
 
 impl Paper {
-    pub fn new() -> Self {
-        Paper {
-            department: String::new(),
-            link: String::new(),
-            name: String::new(),
-            semester: String::new(),
-            year: String::new(),
-        }
-    }
-
-    pub fn link(self: &Self) -> &str {
+    pub fn link(&self) -> &str {
         self.link.as_str()
     }
 
-    pub fn filename(self: &Self) -> String {
+    pub fn filename(&self) -> String {
         format!(
             "{}_{}_{}_{}.pdf",
-            Self::replace_spaces_with_underscore(&self.name.trim()),
-            Self::replace_spaces_with_underscore(&self.department.trim()),
-            Self::replace_spaces_with_underscore(&self.semester.trim()),
-            Self::replace_spaces_with_underscore(&self.year.trim())
+            Self::replace_spaces_with_underscore(self.name.trim()),
+            Self::replace_spaces_with_underscore(self.department.trim()),
+            Self::replace_spaces_with_underscore(self.semester.trim()),
+            Self::replace_spaces_with_underscore(self.year.trim())
         )
     }
 
@@ -95,7 +82,7 @@ pub fn interpret_json(parsed: &JsonValue, list: &mut Vec<Paper>, input: &str) {
                 match matcher.best_match() {
                     Some(result) => {
                         if result.score() > SCORE_THRESHOLD {
-                            let mut paper = Paper::new();
+                            let mut paper = Paper::default();
                             for content in member.entries() {
                                 let val = content.1.as_str().unwrap_or_default();
                                 match content.0 {

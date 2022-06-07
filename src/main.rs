@@ -1,4 +1,3 @@
-use json;
 use std::fs;
 use std::io;
 use std::process;
@@ -6,7 +5,6 @@ use std::sync::mpsc::{channel, Sender};
 use std::{error::Error, path::PathBuf};
 use termcolor::Color;
 
-use mfqp;
 use mfqp::Paper;
 
 #[tokio::main]
@@ -41,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     input = String::new();
     io::stdin().read_line(&mut input)?;
     input = input.trim().to_string();
-    if input == String::from("y") {
+    if &input == "y" {
         let mut download_directory = get_default_dir();
         mfqp::print_in_color(
             format!(
@@ -81,13 +79,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         let printer = tokio::spawn(async move {
-            loop {
-                match rx.recv() {
-                    Ok(message) => match message.color {
-                        Color::White => println!("{}", message.message),
-                        _ => mfqp::print_in_color(&message.message, message.color),
-                    },
-                    Err(_) => break,
+            while let Ok(message) = rx.recv() {
+                match message.color {
+                    Color::White => println!("{}", message.message),
+                    _ => mfqp::print_in_color(&message.message, message.color),
                 }
             }
         });
@@ -104,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         input = String::new();
         io::stdin().read_line(&mut input)?;
         input = input.trim().to_string();
-        if input != String::from("n") {
+        if &input != "n" {
             for paper in &list {
                 println!("{}\n", paper);
             }
